@@ -127,16 +127,12 @@ String receive_data(byte slave){
   }*/
   readStartTime = millis();
   input = Serial.readStringUntil("/");
-  Serial.println(input);
-  if((millis() - readStartTime) > timeout) Serial.println("TIMEOUT");
-  if(input.equals("") ) return;
+  //if((millis() - readStartTime) > timeout) Serial.println("TIMEOUT");
+  if(input.equals("") ) return "";
   Serial.println(input);
 
-  if(input.charAt(0) != '*') return;
-  Serial.println(input.charAt(0));
-  Serial.println(input.substring(1,3));
-  Serial.println(input.substring(3,5));
-  if(!input.substring(1,3).equals(ByteToHex(slave)))
+  if(input.charAt(0) != '*') return "";
+  if(!input.substring(1,3).equals(ByteToHex(slave))) return "";
   rec_data = HexToByte(input.substring(3,5));
   String cs = input.substring(5,7);
   return(rec_data);
@@ -148,12 +144,15 @@ void stanje(){
   lcd.setCursor(0,0);
   lcd.print("StanjePBS2: ");
   lcd.setCursor(12,0);
-  //lcd.print(to kaj reciver da sa S2);
+  lcd.print("00000000");
+  lcd.setCursor(20-String(test.toInt(),BIN).length() ,0);
   //drugi red
   lcd.setCursor(0,1);
   lcd.print("StanjePBS3: ");
   lcd.setCursor(12,1);
-  //lcd.print(to kaj reciver da sa S3);
+  lcd.print("00000000");
+  lcd.setCursor(20-String(test.toInt(),BIN).length() ,0);
+
   
   
   //treći red
@@ -175,74 +174,9 @@ void loop() {
   String test = "";
   if (Serial.available() > 0){
     test = receive_data(02);
-    Serial.println(test);
+    Serial.println(String(test.toInt(),BIN));
   }
-delay(100);  
+  delay(100);  
 
-/*
-  if(digitalRead(37) == 0)
-  {
-    StanjeH3ID2 *= -1;
-    if (StanjeH3ID2 > 0) transmit_data(02,31); //Pali H3 ID2
-    else transmit_data(02,30); //Gasi H3 ID2
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(36) == 0)
-  {
-    StanjeH4ID2 *= -1;
-    if (StanjeH4ID2 > 0) transmit_data(02,41); //Pali H4 ID2
-    else transmit_data(02,40); //Gasi H4 ID2
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(35) == 0)
-  {
-    StanjeH5ID2 *= -1;
-    if (StanjeH5ID2 > 0) transmit_data(02,51); //Pali H5 ID2
-    else transmit_data(02,50); // Gasi H5 ID2
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(34) == 0)
-  {
-    StanjeH6ID2 *= -1;
-    if (StanjeH6ID2 > 0) transmit_data(02,61); //Pali H6 ID2
-    else transmit_data(02,60); //Gasu H6 ID2
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(33) == 0)
-  {
-    StanjeH3ID3 *= -1;
-    if (StanjeH3ID3 > 0) transmit_data(03,31); // Pali H3 ID3
-    else transmit_data(03,30); //Gasi H3 ID3
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(32) == 0)
-  {
-    StanjeH4ID3 *= -1;
-    if (StanjeH4ID3 > 0) transmit_data(03,41); // Pali H4 ID3
-    else transmit_data(03,40); // Gasi H4 ID3
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(31) == 0)
-  {
-    StanjeH5ID3 *= -1;
-    if (StanjeH5ID3 > 0) transmit_data(03,51); //Pali H5 ID3
-    else transmit_data(03,50); //Gasi H5 ID3
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(30) == 0)
-  {
-    StanjeH6ID3 *= -1;
-    if (StanjeH6ID3 > 0) transmit_data(03,61); //Pali H6 ID3
-    else transmit_data(03,60); //Gasi H6 ID3
-    delay(TipkaloDelay);
-  }
-  */
   
 }
