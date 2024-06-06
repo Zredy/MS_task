@@ -18,8 +18,8 @@
 #include<TimerOne.h>   //dodano
 #include<LiquidCrystal.h> //dodano
 byte CTRL = PORT_D4;
-#define TRANSMIT PORTD |= (1 << 4)
-#define RECEIVE PORTD &= ~(1 << 4)
+#define TRANSMIT (PORTD |= (1 << 4))
+#define RECEIVE (PORTD &= ~(1 << 4))
 
 #define ID "02"
 
@@ -68,8 +68,8 @@ LiquidCrystal lcd(rs, en, b4, b5, b6, b7);
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);
-  Serial.setTimeout(10);
+  Serial1.begin(115200);
+  Serial1.setTimeout(10);
   
   //pokretanje LCD-a
   lcd.begin(20,4);
@@ -78,8 +78,6 @@ void setup() {
   Timer1.initialize(166666); //frekvencija od 3Hz
   Timer1.attachInterrupt( stanje );   //spajamo ga na funkciju stanje koja printa na LCD temp., i stanje porta B slejvova
 
-  
-  
   //dodano za tipkala
   pinMode(37,INPUT_PULLUP); //pali/gasi H3 slave ID=2 
   pinMode(36,INPUT_PULLUP); //pali/gasi H4 slave ID=2 
@@ -99,6 +97,7 @@ String calc_checksum(byte slave, byte command){
 }
 
 void transmit_data(byte slave, byte command){
+  TRANSMIT;
   String data = "";
   data += "#";
   data += ByteToHex(slave);
@@ -106,21 +105,17 @@ void transmit_data(byte slave, byte command){
   data += command;
   data += calc_checksum(slave, command);
   data += "/";
-  Serial.println(data);
+  Serial1.println(data);
 }
 
 String receive_data(byte slave){
   sei();
-  readStartTime = millis();
+  RECEIVE;
   String input = "";
   String rec_data = "";
-  if(Serial.available() > 0){
-    if((millis() - readStartTime) > timeout) {
-      dataDrops++;
-      return "";
-    }
-    input = Serial.readStringUntil("/");
-    Serial.println(input);
+  if(Serial1.available() > 0){
+    input = Serial1.readStringUntil("/");
+    //Serial.println(input);
   }
   
   if(input.charAt(0) != '*') return "";
@@ -135,24 +130,26 @@ String receive_data(byte slave){
 // * 02 AA BB /
 void stanje(){
   String temp = "";
-  transmit_data(send_slave, send_comm);
-
-  temp = receive_data(send_slave);
-  //Serial.println(temp);
-
-  if(!temp.equals("")){
-    if(send_comm == 20){
-      lcd.setCursor(12,send_slave-2);
-      lcd.print("00000000");
-      lcd.setCursor(20-String(temp.toInt(),BIN).length() ,send_slave-2);
-      lcd.print(String(temp.toInt(),BIN));
+  for(send_slave = 2; send_slave < 4; send_slave++){
+    transmit_data(send_slave, send_comm);
+    temp = receive_data(send_slave);
+  
+    if(!temp.equals("")){
+      if(send_comm == 20){
+        lcd.setCursor(12,send_slave-2);
+        lcd.print("00000000");
+        lcd.setCursor(20-String(temp.toInt(),BIN).length() ,send_slave-2);
+        lcd.print(String(temp.toInt(),BIN));
+      }
+      if(send_comm == 25){
+        lcd.setCursor(9,send_slave);
+        lcd.print(temp);
+      }
+      if(send_comm == 20) send_comm = 25;
+      else if(send_comm == 25) send_comm = 20;
+    } else {
+      dataDrops++;
     }
-    if(send_comm == 25){
-      lcd.setCursor(9,send_slave);
-      lcd.print(temp);
-    }
-    if(send_comm == 20) send_comm = 25;
-    else if(send_comm == 25) send_comm = 20;
   }
   
 
@@ -193,67 +190,87 @@ void loop() {
 
 void ProvjeriTipke()
 {
+  byte temp_comm = 0;
+  byte temp_slave = 0;
    if(digitalRead(37) == 0)
   {
     stanja[0] *= -1;
-    if (stanja[0] > 0) transmit_data(02,31); //Pali H3 ID2
-    else transmit_data(02,30); //Gasi H3 ID2
+    temp_slave = 02;
+    if (stanja[0] > 0) temp_comm = 31; //Pali H3 ID2
+    else temp_comm = 30; //Gasi H3 ID2
     while(digitalRead(37) == 0);
   }
   
   if(digitalRead(36) == 0)
   {
     stanja[1] *= -1;
-    if (stanja[1] > 0) transmit_data(02,41); //Pali H4 ID2
-    else transmit_data(02,40); //Gasi H4 ID2
+    temp_slave = 02;
+    if (stanja[1] > 0) temp_comm = 41; //Pali H4 ID2
+    else temp_comm = 40; //Gasi H4 ID2
     while(digitalRead(36) == 0);
   }
   
   if(digitalRead(35) == 0)
   {
     stanja[2] *= -1;
-    if (stanja[2] > 0) transmit_data(02,51); //Pali H5 ID2
-    else transmit_data(02,50); // Gasi H5 ID2
+    temp_slave = 02;
+    if (stanja[2] > 0) temp_comm = 51; //Pali H5 ID2
+    else temp_comm = 50; // Gasi H5 ID2
     while(digitalRead(35) == 0);
   }
   
   if(digitalRead(34) == 0)
   {
     stanja[3] *= -1;
-    if (stanja[3] > 0) transmit_data(02,61); //Pali H6 ID2
-    else transmit_data(02,60); //Gasu H6 ID2
+    temp_slave = 02;
+    if (stanja[3] > 0) temp_comm = 61; //Pali H6 ID2
+    else temp_comm = 60; //Gasu H6 ID2
     while(digitalRead(34) == 0);
   }
   
   if(digitalRead(33) == 0)
   {
     stanja[4] *= -1;
-    if (stanja[4] > 0) transmit_data(03,31); // Pali H3 ID3
-    else transmit_data(03,30); //Gasi H3 ID3
+    temp_slave = 03;
+    if (stanja[4] > 0) temp_comm = 31; // Pali H3 ID3
+    else temp_comm = 30; //Gasi H3 ID3
     while(digitalRead(33) == 0);
   }
   
   if(digitalRead(32) == 0)
   {
     stanja[5] *= -1;
-    if (stanja[5] > 0) transmit_data(03,41); // Pali H4 ID3
-    else transmit_data(03,40); // Gasi H4 ID3
+    temp_slave = 03;
+    if (stanja[5] > 0) temp_comm = 41; // Pali H4 ID3
+    else temp_comm = 40; // Gasi H4 ID3
     while(digitalRead(32) == 0);
   }
   
   if(digitalRead(31) == 0)
   {
     stanja[6] *= -1;
-    if (stanja[6] > 0) transmit_data(03,51); //Pali H5 ID3
-    else transmit_data(03,50); //Gasi H5 ID3
+    temp_slave = 03;
+    if (stanja[6] > 0) temp_comm = 51; //Pali H5 ID3
+    else temp_comm = 50; //Gasi H5 ID3
     while(digitalRead(31) == 0);
   }
   
   if(digitalRead(30) == 0)
   {
     stanja[7] *= -1;
-    if (stanja[7] > 0) transmit_data(03,61); //Pali H6 ID3
-    else transmit_data(03,60); //Gasi H6 ID3
+    temp_slave = 03;
+    if (stanja[7] > 0) temp_comm = 61; //Pali H6 ID3
+    else temp_comm = 60; //Gasi H6 ID3
     while(digitalRead(30) == 0);
   }
+  String temp;
+  if(temp_slave != 0 and temp_comm != 0){
+    transmit_data(temp_slave, temp_comm);
+    temp = receive_data(send_slave);
+    if (temp != "01"){
+      //Serial.println("NOT OK");
+    }
+  }
+  
+  
 }
