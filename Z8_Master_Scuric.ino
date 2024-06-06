@@ -17,7 +17,6 @@
 #include <FSBAVR.h>
 #include<TimerOne.h>   //dodano
 #include<LiquidCrystal.h> //dodano
-#include<OneWire.h>     //dodano
 byte CTRL = PORT_D4;
 #define TRANSMIT PORTD |= (1 << 4)
 #define RECEIVE PORTD &= ~(1 << 4)
@@ -26,19 +25,13 @@ byte CTRL = PORT_D4;
 
 #define timeout 10
 
-int StanjeH3ID2 = -1;
-int StanjeH4ID2 = -1;
-int StanjeH5ID2 = -1;
-int StanjeH6ID2 = -1;
-int StanjeH3ID3 = -1;
-int StanjeH4ID3 = -1;
-int StanjeH5ID3 = -1;
-int StanjeH6ID3 = -1;
-
-int TipkaloDelay = 250;
+volatile int stanja[8] = {-1,-1,-1,-1,-1,-1,-1,-1};
 
 unsigned long readStartTime = 0;
-unsigned long dataDrops = 0;
+volatile int dataDrops = 0;
+
+volatile byte send_slave = 02;
+volatile byte send_comm = 20;
 
 String ByteToHex(byte by_in){
   String val = String(by_in, HEX);
@@ -75,14 +68,15 @@ LiquidCrystal lcd(rs, en, b4, b5, b6, b7);
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  Serial.begin(115200);
+  Serial.setTimeout(10);
   
   //pokretanje LCD-a
   lcd.begin(20,4);
   
   //dodano za timer
-  Timer1.initialize(333333); //frekvencija od 3Hz
-  //Timer1.attachInterrupt( stanje );   //spajamo ga na funkciju stanje koja printa na LCD temp., i stanje porta B slejvova
+  Timer1.initialize(166666); //frekvencija od 3Hz
+  Timer1.attachInterrupt( stanje );   //spajamo ga na funkciju stanje koja printa na LCD temp., i stanje porta B slejvova
 
   
   
@@ -116,67 +110,150 @@ void transmit_data(byte slave, byte command){
 }
 
 String receive_data(byte slave){
-  //Serial.setTimeout(10);
+  sei();
+  readStartTime = millis();
   String input = "";
   String rec_data = "";
-  /*
   if(Serial.available() > 0){
-    readStartTime = millis();
+    if((millis() - readStartTime) > timeout) {
+      dataDrops++;
+      return "";
+    }
     input = Serial.readStringUntil("/");
     Serial.println(input);
-  }*/
-  readStartTime = millis();
-  input = Serial.readStringUntil("/");
-  //if((millis() - readStartTime) > timeout) Serial.println("TIMEOUT");
-  if(input.equals("") ) return "";
-  Serial.println(input);
-
+  }
+  
   if(input.charAt(0) != '*') return "";
   if(!input.substring(1,3).equals(ByteToHex(slave))) return "";
   rec_data = HexToByte(input.substring(3,5));
   String cs = input.substring(5,7);
   return(rec_data);
+  
+  cli();
 }
+
 // * 02 AA BB /
 void stanje(){
+  String temp = "";
+  transmit_data(send_slave, send_comm);
+
+  temp = receive_data(send_slave);
+  //Serial.println(temp);
+
+  if(!temp.equals("")){
+    if(send_comm == 20){
+      lcd.setCursor(12,send_slave-2);
+      lcd.print("00000000");
+      lcd.setCursor(20-String(temp.toInt(),BIN).length() ,send_slave-2);
+      lcd.print(String(temp.toInt(),BIN));
+    }
+    if(send_comm == 25){
+      lcd.setCursor(9,send_slave);
+      lcd.print(temp);
+    }
+    if(send_comm == 20) send_comm = 25;
+    else if(send_comm == 25) send_comm = 20;
+  }
   
+
   // prvi red
   lcd.setCursor(0,0);
   lcd.print("StanjePBS2: ");
-  lcd.setCursor(12,0);
-  lcd.print("00000000");
-  lcd.setCursor(20-String(test.toInt(),BIN).length() ,0);
+  //lcd.setCursor(12,0);
+  //lcd.print("00000000");
+  //lcd.setCursor(20-String(test.toInt(),BIN).length() ,0);
   //drugi red
   lcd.setCursor(0,1);
   lcd.print("StanjePBS3: ");
-  lcd.setCursor(12,1);
-  lcd.print("00000000");
-  lcd.setCursor(20-String(test.toInt(),BIN).length() ,0);
+  //lcd.setCursor(12,1);
+  //lcd.print("00000000");
+ // lcd.setCursor(20-String(test.toInt(),BIN).length() ,0);
 
-  
-  
   //treći red
   lcd.setCursor(0,2);
   lcd.print("Temp S2=");
-  lcd.setCursor(9,2);
+  //lcd.setCursor(9,2);
   //lcd.print(tempS2);
- 
+  lcd.setCursor(12,2);
+  lcd.print("X: ");
+  lcd.print(dataDrops);
   
   // četvrti red
   lcd.setCursor(0,3);
   lcd.print("Temp S3=");
-  lcd.setCursor(9,3);
+  //lcd.setCursor(9,3);
   //lcd.print(tempS3);
 
 }
 
 void loop() {
-  String test = "";
-  if (Serial.available() > 0){
-    test = receive_data(02);
-    Serial.println(String(test.toInt(),BIN));
-  }
+  ProvjeriTipke();
   delay(100);  
+}
 
+void ProvjeriTipke()
+{
+   if(digitalRead(37) == 0)
+  {
+    stanja[0] *= -1;
+    if (stanja[0] > 0) transmit_data(02,31); //Pali H3 ID2
+    else transmit_data(02,30); //Gasi H3 ID2
+    while(digitalRead(37) == 0);
+  }
   
+  if(digitalRead(36) == 0)
+  {
+    stanja[1] *= -1;
+    if (stanja[1] > 0) transmit_data(02,41); //Pali H4 ID2
+    else transmit_data(02,40); //Gasi H4 ID2
+    while(digitalRead(36) == 0);
+  }
+  
+  if(digitalRead(35) == 0)
+  {
+    stanja[2] *= -1;
+    if (stanja[2] > 0) transmit_data(02,51); //Pali H5 ID2
+    else transmit_data(02,50); // Gasi H5 ID2
+    while(digitalRead(35) == 0);
+  }
+  
+  if(digitalRead(34) == 0)
+  {
+    stanja[3] *= -1;
+    if (stanja[3] > 0) transmit_data(02,61); //Pali H6 ID2
+    else transmit_data(02,60); //Gasu H6 ID2
+    while(digitalRead(34) == 0);
+  }
+  
+  if(digitalRead(33) == 0)
+  {
+    stanja[4] *= -1;
+    if (stanja[4] > 0) transmit_data(03,31); // Pali H3 ID3
+    else transmit_data(03,30); //Gasi H3 ID3
+    while(digitalRead(33) == 0);
+  }
+  
+  if(digitalRead(32) == 0)
+  {
+    stanja[5] *= -1;
+    if (stanja[5] > 0) transmit_data(03,41); // Pali H4 ID3
+    else transmit_data(03,40); // Gasi H4 ID3
+    while(digitalRead(32) == 0);
+  }
+  
+  if(digitalRead(31) == 0)
+  {
+    stanja[6] *= -1;
+    if (stanja[6] > 0) transmit_data(03,51); //Pali H5 ID3
+    else transmit_data(03,50); //Gasi H5 ID3
+    while(digitalRead(31) == 0);
+  }
+  
+  if(digitalRead(30) == 0)
+  {
+    stanja[7] *= -1;
+    if (stanja[7] > 0) transmit_data(03,61); //Pali H6 ID3
+    else transmit_data(03,60); //Gasi H6 ID3
+    while(digitalRead(30) == 0);
+  }
 }
