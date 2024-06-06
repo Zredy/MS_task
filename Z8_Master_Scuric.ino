@@ -24,6 +24,8 @@ byte CTRL = PORT_D4;
 
 #define ID "02"
 
+#define timeout 10
+
 int StanjeH3ID2 = -1;
 int StanjeH4ID2 = -1;
 int StanjeH5ID2 = -1;
@@ -35,6 +37,8 @@ int StanjeH6ID3 = -1;
 
 int TipkaloDelay = 250;
 
+unsigned long readStartTime = 0;
+unsigned long dataDrops = 0;
 
 String ByteToHex(byte by_in){
   String val = String(by_in, HEX);
@@ -78,7 +82,7 @@ void setup() {
   
   //dodano za timer
   Timer1.initialize(333333); //frekvencija od 3Hz
-  Timer1.attachInterrupt( stanje );   //spajamo ga na funkciju stanje koja printa na LCD temp., i stanje porta B slejvova
+  //Timer1.attachInterrupt( stanje );   //spajamo ga na funkciju stanje koja printa na LCD temp., i stanje porta B slejvova
 
   
   
@@ -111,8 +115,34 @@ void transmit_data(byte slave, byte command){
   Serial.println(data);
 }
 
+String receive_data(byte slave){
+  //Serial.setTimeout(10);
+  String input = "";
+  String rec_data = "";
+  /*
+  if(Serial.available() > 0){
+    readStartTime = millis();
+    input = Serial.readStringUntil("/");
+    Serial.println(input);
+  }*/
+  readStartTime = millis();
+  input = Serial.readStringUntil("/");
+  Serial.println(input);
+  if((millis() - readStartTime) > timeout) Serial.println("TIMEOUT");
+  if(input.equals("") ) return;
+  Serial.println(input);
+
+  if(input.charAt(0) != '*') return;
+  Serial.println(input.charAt(0));
+  Serial.println(input.substring(1,3));
+  Serial.println(input.substring(3,5));
+  if(!input.substring(1,3).equals(ByteToHex(slave)))
+  rec_data = HexToByte(input.substring(3,5));
+  String cs = input.substring(5,7);
+  return(rec_data);
+}
+// * 02 AA BB /
 void stanje(){
-  
   
   // prvi red
   lcd.setCursor(0,0);
@@ -142,7 +172,14 @@ void stanje(){
 }
 
 void loop() {
+  String test = "";
+  if (Serial.available() > 0){
+    test = receive_data(02);
+    Serial.println(test);
+  }
+delay(100);  
 
+/*
   if(digitalRead(37) == 0)
   {
     StanjeH3ID2 *= -1;
@@ -206,7 +243,6 @@ void loop() {
     else transmit_data(03,60); //Gasi H6 ID3
     delay(TipkaloDelay);
   }
-
+  */
   
-  delay(1000);
 }
