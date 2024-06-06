@@ -24,17 +24,78 @@ byte CTRL = PORT_D4;
 
 #define ID "02"
 
-int StanjeH3ID2 = -1;
-int StanjeH4ID2 = -1;
-int StanjeH5ID2 = -1;
-int StanjeH6ID2 = -1;
-int StanjeH3ID3 = -1;
-int StanjeH4ID3 = -1;
-int StanjeH5ID3 = -1;
-int StanjeH6ID3 = -1;
+int stanja[8] = {-1,-1,-1,-1,-1,-1,-1,-1};
 
-int TipkaloDelay = 250;
 
+void ProvjeriTipke()
+{
+
+ 
+  
+   if(digitalRead(37) == 0)
+  {
+    stanja[0] *= -1;
+    if (stanja[0] > 0) transmit_data(02,31); //Pali H3 ID2
+    else transmit_data(02,30); //Gasi H3 ID2
+    while(digitalRead(37) == 0);
+  }
+  
+  if(digitalRead(36) == 0)
+  {
+    stanja[1] *= -1;
+    if (stanja[1] > 0) transmit_data(02,41); //Pali H4 ID2
+    else transmit_data(02,40); //Gasi H4 ID2
+    while(digitalRead(36) == 0);
+  }
+  
+  if(digitalRead(35) == 0)
+  {
+    stanja[2] *= -1;
+    if (stanja[2] > 0) transmit_data(02,51); //Pali H5 ID2
+    else transmit_data(02,50); // Gasi H5 ID2
+    while(digitalRead(35) == 0);
+  }
+  
+  if(digitalRead(34) == 0)
+  {
+    stanja[3] *= -1;
+    if (stanja[3] > 0) transmit_data(02,61); //Pali H6 ID2
+    else transmit_data(02,60); //Gasu H6 ID2
+    while(digitalRead(34) == 0);
+  }
+  
+  if(digitalRead(33) == 0)
+  {
+    stanja[4] *= -1;
+    if (stanja[4] > 0) transmit_data(03,31); // Pali H3 ID3
+    else transmit_data(03,30); //Gasi H3 ID3
+    while(digitalRead(33) == 0);
+  }
+  
+  if(digitalRead(32) == 0)
+  {
+    stanja[5] *= -1;
+    if (stanja[5] > 0) transmit_data(03,41); // Pali H4 ID3
+    else transmit_data(03,40); // Gasi H4 ID3
+    while(digitalRead(32) == 0);
+  }
+  
+  if(digitalRead(31) == 0)
+  {
+    stanja[6] *= -1;
+    if (stanja[6] > 0) transmit_data(03,51); //Pali H5 ID3
+    else transmit_data(03,50); //Gasi H5 ID3
+    while(digitalRead(31) == 0);
+  }
+  
+  if(digitalRead(30) == 0)
+  {
+    stanja[7] *= -1;
+    if (stanja[7] > 0) transmit_data(03,61); //Pali H6 ID3
+    else transmit_data(03,60); //Gasi H6 ID3
+    while(digitalRead(30) == 0);
+  }
+}
 
 String ByteToHex(byte by_in){
   String val = String(by_in, HEX);
@@ -142,71 +203,6 @@ void stanje(){
 }
 
 void loop() {
-
-  if(digitalRead(37) == 0)
-  {
-    StanjeH3ID2 *= -1;
-    if (StanjeH3ID2 > 0) transmit_data(02,31); //Pali H3 ID2
-    else transmit_data(02,30); //Gasi H3 ID2
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(36) == 0)
-  {
-    StanjeH4ID2 *= -1;
-    if (StanjeH4ID2 > 0) transmit_data(02,41); //Pali H4 ID2
-    else transmit_data(02,40); //Gasi H4 ID2
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(35) == 0)
-  {
-    StanjeH5ID2 *= -1;
-    if (StanjeH5ID2 > 0) transmit_data(02,51); //Pali H5 ID2
-    else transmit_data(02,50); // Gasi H5 ID2
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(34) == 0)
-  {
-    StanjeH6ID2 *= -1;
-    if (StanjeH6ID2 > 0) transmit_data(02,61); //Pali H6 ID2
-    else transmit_data(02,60); //Gasu H6 ID2
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(33) == 0)
-  {
-    StanjeH3ID3 *= -1;
-    if (StanjeH3ID3 > 0) transmit_data(03,31); // Pali H3 ID3
-    else transmit_data(03,30); //Gasi H3 ID3
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(32) == 0)
-  {
-    StanjeH4ID3 *= -1;
-    if (StanjeH4ID3 > 0) transmit_data(03,41); // Pali H4 ID3
-    else transmit_data(03,40); // Gasi H4 ID3
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(31) == 0)
-  {
-    StanjeH5ID3 *= -1;
-    if (StanjeH5ID3 > 0) transmit_data(03,51); //Pali H5 ID3
-    else transmit_data(03,50); //Gasi H5 ID3
-    delay(TipkaloDelay);
-  }
-  
-  if(digitalRead(30) == 0)
-  {
-    StanjeH6ID3 *= -1;
-    if (StanjeH6ID3 > 0) transmit_data(03,61); //Pali H6 ID3
-    else transmit_data(03,60); //Gasi H6 ID3
-    delay(TipkaloDelay);
-  }
-
-  
+  ProvjeriTipke();
   delay(1000);
 }
